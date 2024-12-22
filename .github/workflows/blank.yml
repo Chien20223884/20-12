@@ -1,0 +1,118 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+typedef struct Node {
+    char title[100];
+    int pages;
+    char level[20];
+    struct Node* children;
+    struct Node* next;
+} Node;
+Node* createNode(const char* title, int pages, const char* level) {
+    Node* node = (Node*)malloc(sizeof(Node));
+    strcpy(node->title, title);
+    node->pages = pages;
+    strcpy(node->level, level);
+    node->children = NULL;
+    node->next = NULL;
+    return node;
+}
+void addChild(Node* parent, Node* child) {
+    if (parent->children == NULL) {
+        parent->children = child;
+    } else {
+        Node* temp = parent->children;
+        while (temp->next != NULL) {
+            temp = temp->next;
+        }
+        temp->next = child;
+    }
+}
+int countChapters(Node* root) {
+    int count = 0;
+    Node* temp = root->children;
+    while (temp != NULL) {
+        if (strcmp(temp->level, "chapter") == 0) {
+            count++;
+        }
+        temp = temp->next;
+    }
+    return count;
+}
+int calculateTotalPages(Node* node) {
+    int totalPages = node->pages;
+    Node* temp = node->children;
+    while (temp != NULL) {
+        totalPages += calculateTotalPages(temp);
+        temp = temp->next;
+    }
+    return totalPages;
+}
+Node* findLongestChapter(Node* root) {
+    Node* longestChapter = NULL;
+    int maxPages = 0;
+    Node* temp = root->children;
+    while (temp != NULL) {
+        if (strcmp(temp->level, "chapter") == 0) {
+            int chapterPages = calculateTotalPages(temp);
+            if (chapterPages > maxPages) {
+                maxPages = chapterPages;
+                longestChapter = temp;
+            }
+        }
+        temp = temp->next;
+    }
+    return longestChapter;
+}
+int findAndRemove(Node* parent, const char* title) {
+    Node* temp = parent->children;
+    Node* prev = NULL;
+    while (temp != NULL) {
+        if (strcmp(temp->title, title) == 0) {
+            if (prev == NULL) {
+                parent->children = temp->next;
+            } else {
+                prev->next = temp->next;
+            }
+            free(temp);
+            return 1;
+        }
+        if (findAndRemove(temp, title)) {
+            return 1;
+        }
+        prev = temp;
+        temp = temp->next;
+    }
+    return 0;
+}
+void updatePageCounts(Node* node) {
+    Node* temp = node->children;
+    node->pages = 0;
+    while (temp != NULL) {
+        updatePageCounts(temp);
+        node->pages += temp->pages;
+        temp = temp->next;
+    }
+}
+int main() {
+    Node* book = createNode("Book", 0, "root");
+    Node* chapter1 = createNode("Chapter 1", 10, "chapter");
+    Node* section1 = createNode("Section 1.1", 5, "section");
+    addChild(chapter1, section1);
+    Node* chapter2 = createNode("Chapter 2", 20, "chapter");
+    Node* section2 = createNode("Section 2.1", 15, "section");
+    addChild(chapter2, section2);
+    addChild(book, chapter1);
+    addChild(book, chapter2);
+    printf("Number of chapters: %d\n", countChapters(book));
+    Node* longestChapter = findLongestChapter(book);
+    if (longestChapter != NULL) {
+        printf("Longest chapter: %s\n", longestChapter->title);
+    }
+    if (findAndRemove(book, "Section 2.1")) {
+        printf("Section 2.1 removed.\n");
+        updatePageCounts(book);
+    }
+    printf("Number of chapters after removal: %d\n", countChapters(book));
+    return 0;
+}
